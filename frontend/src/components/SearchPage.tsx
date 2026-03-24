@@ -27,19 +27,19 @@ function AccordionFilter({ label, options, selected, onChange }: {
         style={{
           width: '100%', background: 'none', border: 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '10px 0', color: 'var(--text-sec)',
+          padding: '13px 0', color: 'var(--text-sec)',
         }}
       >
-        <span style={{ fontSize: 13, fontWeight: 600 }}>
+        <span style={{ fontSize: 16, fontWeight: 600 }}>
           {label}
           {selected.length > 0 && (
             <span style={{
               marginLeft: 6, background: '#cc0000', color: '#fff',
-              borderRadius: 10, fontSize: 10, fontWeight: 700, padding: '1px 6px',
+              borderRadius: 10, fontSize: 12, fontWeight: 700, padding: '1px 7px',
             }}>{selected.length}</span>
           )}
         </span>
-        <span style={{ fontSize: 10, color: 'var(--text-muted)', transition: 'transform 0.15s', display: 'inline-block', transform: open ? 'rotate(180deg)' : 'none' }}>▼</span>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)', transition: 'transform 0.15s', display: 'inline-block', transform: open ? 'rotate(180deg)' : 'none' }}>▼</span>
       </button>
       <AnimatePresence>
         {open && (
@@ -48,7 +48,7 @@ function AccordionFilter({ label, options, selected, onChange }: {
             exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.15 }}
             style={{ overflow: 'hidden' }}
           >
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingBottom: 12 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingBottom: 15 }}>
               {options.map(opt => {
                 const active = selected.includes(opt)
                 return (
@@ -56,7 +56,7 @@ function AccordionFilter({ label, options, selected, onChange }: {
                     background: active ? 'var(--text)' : 'none',
                     border: `1px solid ${active ? 'var(--text)' : 'var(--border)'}`,
                     color: active ? 'var(--bg)' : 'var(--text-sec)',
-                    borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer',
+                    borderRadius: 6, padding: '5px 13px', fontSize: 15, cursor: 'pointer',
                   }}>
                     {opt}
                   </button>
@@ -130,9 +130,9 @@ export default function SearchPage({ onSelect, onOpenPlanner }: Props) {
     position: 'relative',
     background: filtersOpen || activeFilters > 0 ? 'var(--surface-hover)' : 'var(--surface)',
     border: `1px solid ${filtersOpen || activeFilters > 0 ? 'var(--text-muted)' : 'var(--border)'}`,
-    borderRadius: 10,
+    borderRadius: 999,
     color: activeFilters > 0 ? 'var(--text)' : 'var(--text-muted)',
-    width: 50, cursor: 'pointer', flexShrink: 0,
+    width: 63, cursor: 'pointer', flexShrink: 0,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   }
 
@@ -142,21 +142,21 @@ export default function SearchPage({ onSelect, onOpenPlanner }: Props) {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        style={{ width: '100%', maxWidth: 560 }}
+        style={{ width: '100%', maxWidth: 700 }}
       >
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <div style={{ fontSize: 44, fontWeight: 800, letterSpacing: -1 }}>
+        <div style={{ textAlign: 'center', marginBottom: 50 }}>
+          <div style={{ fontSize: 55, fontWeight: 800, letterSpacing: -1.5 }}>
             <span style={{ color: '#f10e0e' }}>DTU</span>
             <span style={{ color: 'var(--text)' }}> Courses</span>
           </div>
-          <div style={{ color: 'var(--text-muted)', marginTop: 8, fontSize: 15 }}>
+          <div style={{ color: 'var(--text-muted)', marginTop: 10, fontSize: 19 }}>
             Search 2,691 courses · 6 years of grade data
           </div>
           <button onClick={onOpenPlanner} style={{
-            marginTop: 16, background: 'none', border: '1px solid var(--border)',
-            color: 'var(--text-muted)', borderRadius: 8, padding: '8px 20px',
-            fontSize: 13, cursor: 'pointer',
+            marginTop: 20, background: 'none', border: '1px solid var(--border)',
+            color: 'var(--text-muted)', borderRadius: 10, padding: '10px 25px',
+            fontSize: 16, cursor: 'pointer',
           }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--text-muted)'; e.currentTarget.style.color = 'var(--text)' }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}
@@ -166,7 +166,7 @@ export default function SearchPage({ onSelect, onOpenPlanner }: Props) {
         </div>
 
         {/* Search box + filter button */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
           <div style={{ position: 'relative', flex: 1 }}>
             <input
               autoFocus
@@ -177,27 +177,27 @@ export default function SearchPage({ onSelect, onOpenPlanner }: Props) {
               style={{
                 width: '100%',
                 background: 'var(--surface)', border: '1px solid var(--border)',
-                borderRadius: 10, color: 'var(--text)',
-                padding: '14px 16px', fontSize: 16, outline: 'none', boxSizing: 'border-box',
+                borderRadius: 999, color: 'var(--text)',
+                padding: '18px 20px', fontSize: 20, outline: 'none', boxSizing: 'border-box',
               }}
             />
             {loading && (
-              <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 13 }}>…</div>
+              <div style={{ position: 'absolute', right: 18, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 16 }}>…</div>
             )}
           </div>
 
           {/* Filter button */}
           <button onClick={() => setFiltersOpen(o => !o)} title="Filters" style={filterBtnStyle}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="4" y1="6" x2="20" y2="6" />
               <line x1="8" y1="12" x2="16" y2="12" />
               <line x1="11" y1="18" x2="13" y2="18" />
             </svg>
             {activeFilters > 0 && (
               <span style={{
-                position: 'absolute', top: 4, right: 4,
+                position: 'absolute', top: 5, right: 5,
                 background: '#cc0000', color: '#fff', borderRadius: '50%',
-                fontSize: 9, fontWeight: 700, width: 13, height: 13,
+                fontSize: 10, fontWeight: 700, width: 15, height: 15,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>{activeFilters}</span>
             )}
@@ -215,18 +215,18 @@ export default function SearchPage({ onSelect, onOpenPlanner }: Props) {
               style={{ overflow: 'hidden' }}
             >
               <div style={{
-                marginTop: 8, padding: '0 16px 12px',
-                background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10,
+                marginTop: 10, padding: '0 20px 15px',
+                background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 13,
               }}>
                 <AccordionFilter label="Period"    options={filterOptions.periods}     selected={periods}     onChange={setPeriods} />
                 <AccordionFilter label="Institute" options={filterOptions.departments} selected={departments} onChange={setDepartments} />
                 <AccordionFilter label="Language"  options={filterOptions.languages}   selected={languages}   onChange={setLanguages} />
 
-                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                <div style={{ display: 'flex', gap: 10, marginTop: 15 }}>
                   {activeFilters > 0 && (
                     <button onClick={() => { setLanguages([]); setDepartments([]); setPeriods([]) }} style={{
-                      flex: 1, background: 'none', border: '1px solid var(--border)', borderRadius: 8,
-                      color: 'var(--text-muted)', padding: '9px', fontSize: 12, cursor: 'pointer',
+                      flex: 1, background: 'none', border: '1px solid var(--border)', borderRadius: 10,
+                      color: 'var(--text-muted)', padding: '11px', fontSize: 15, cursor: 'pointer',
                     }}>
                       Clear
                     </button>
@@ -235,12 +235,12 @@ export default function SearchPage({ onSelect, onOpenPlanner }: Props) {
                     onClick={() => { if (debounceRef.current) clearTimeout(debounceRef.current); runSearch() }}
                     style={{
                       flex: 1, background: 'var(--surface-hover)', border: '1px solid var(--border)',
-                      borderRadius: 8, color: 'var(--text-sec)', padding: '9px',
-                      fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                      borderRadius: 10, color: 'var(--text-sec)', padding: '11px',
+                      fontSize: 16, fontWeight: 600, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
                     }}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                     </svg>
                     Search
@@ -260,7 +260,7 @@ export default function SearchPage({ onSelect, onOpenPlanner }: Props) {
               exit={{ opacity: 0 }}
               style={{
                 background: 'var(--surface)', border: '1px solid var(--border)',
-                borderRadius: 10, overflow: 'hidden', marginTop: 10,
+                borderRadius: 13, overflow: 'hidden', marginTop: 13,
               }}
             >
               {results.map((r, i) => (
@@ -271,24 +271,27 @@ export default function SearchPage({ onSelect, onOpenPlanner }: Props) {
                   style={{
                     width: '100%', background: 'none', border: 'none',
                     borderTop: i === 0 ? 'none' : '1px solid var(--border-subtle)',
-                    color: 'var(--text-sec)', padding: '12px 16px', textAlign: 'left',
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12,
+                    color: 'var(--text-sec)', padding: '15px 20px', textAlign: 'left',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 15,
                   }}
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-hover)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'none')}
                 >
-                  <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'monospace', minWidth: 48 }}>
+                  <span style={{ fontSize: 15, color: 'var(--text-muted)', fontFamily: 'monospace', minWidth: 60 }}>
                     {r.course_number}
                   </span>
-                  <span style={{ fontSize: 14 }}>{r.name}</span>
+                  <span style={{ fontSize: 17 }}>{r.name}</span>
                   {selecting === r.course_number && (
-                    <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: 12 }}>loading…</span>
+                    <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: 15 }}>loading…</span>
                   )}
                 </button>
               ))}
             </motion.div>
           )}
         </AnimatePresence>
+      <div style={{ textAlign: 'center', marginTop: 48, color: 'var(--text-muted)', fontSize: 12 }}>
+        Made by Frederik Bergenholtz
+      </div>
       </motion.div>
     </div>
   )

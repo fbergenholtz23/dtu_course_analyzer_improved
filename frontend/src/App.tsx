@@ -25,14 +25,33 @@ export default function App() {
         onClick={() => setLight(l => !l)}
         title={light ? 'Switch to dark mode' : 'Switch to light mode'}
         style={{
-          position: 'fixed', top: 14, right: 20, zIndex: 999,
+          position: 'fixed', top: 16, right: 20, zIndex: 999,
           background: 'none', border: '1px solid var(--border)',
-          color: 'var(--text-muted)', borderRadius: 6,
-          padding: '5px 10px', fontSize: 14, cursor: 'pointer',
-          lineHeight: 1,
+          color: 'var(--text-muted)', borderRadius: 8,
+          padding: 0, cursor: 'pointer', lineHeight: 1,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: 37, height: 37,
         }}
       >
-        {light ? '🌙' : '☀️'}
+        {light ? (
+          // Dark mode: show moon (dark, no fill)
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+        ) : (
+          // Light mode: show sun (bright, filled)
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+        )}
       </button>
 
       <AnimatePresence mode="wait">
