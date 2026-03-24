@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { CourseSearchResult, CourseDetail } from '../types'
 
-interface Filters {
+interface FilterOptions {
   languages: string[]
   departments: string[]
-  seasons: string[]
+  periods: string[]
 }
 
 interface Props {
@@ -13,46 +13,107 @@ interface Props {
   onOpenPlanner: () => void
 }
 
+function AccordionFilter({ label, options, selected, onChange }: {
+  label: string
+  options: string[]
+  selected: string[]
+  onChange: (val: string[]) => void
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div style={{ borderTop: '1px solid var(--border-subtle)' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '10px 0', color: 'var(--text-sec)',
+        }}
+      >
+        <span style={{ fontSize: 13, fontWeight: 600 }}>
+          {label}
+          {selected.length > 0 && (
+            <span style={{
+              marginLeft: 6, background: '#cc0000', color: '#fff',
+              borderRadius: 10, fontSize: 10, fontWeight: 700, padding: '1px 6px',
+            }}>{selected.length}</span>
+          )}
+        </span>
+        <span style={{ fontSize: 10, color: 'var(--text-muted)', transition: 'transform 0.15s', display: 'inline-block', transform: open ? 'rotate(180deg)' : 'none' }}>▼</span>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.15 }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingBottom: 12 }}>
+              {options.map(opt => {
+                const active = selected.includes(opt)
+                return (
+                  <button key={opt} onClick={() => onChange(active ? selected.filter(v => v !== opt) : [...selected, opt])} style={{
+                    background: active ? 'var(--text)' : 'none',
+                    border: `1px solid ${active ? 'var(--text)' : 'var(--border)'}`,
+                    color: active ? 'var(--bg)' : 'var(--text-sec)',
+                    borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer',
+                  }}>
+                    {opt}
+                  </button>
+                )
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
 export default function SearchPage({ onSelect, onOpenPlanner }: Props) {
   const [query, setQuery] = useState('')
-  const [language, setLanguage] = useState('')
-  const [department, setDepartment] = useState('')
-  const [season, setSeason] = useState('')
-  const [filters, setFilters] = useState<Filters>({ languages: [], departments: [], seasons: [] })
+  const [languages, setLanguages] = useState<string[]>([])
+  const [departments, setDepartments] = useState<string[]>([])
+  const [periods, setPeriods] = useState<string[]>([])
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({ languages: [], departments: [], periods: [] })
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [results, setResults] = useState<CourseSearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const [selecting, setSelecting] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const activeFilters = languages.length + departments.length + periods.length
+
   useEffect(() => {
-    fetch('/api/filters')
-      .then(r => r.json())
-      .then(setFilters)
-      .catch(() => {})
+    fetch('/api/filters').then(r => r.json()).then(setFilterOptions).catch(() => {})
   }, [])
 
+  const runSearch = useCallback(async () => {
+    const params = new URLSearchParams()
+    if (query.trim()) params.set('q', query.trim())
+    languages.forEach(l => params.append('language', l))
+    departments.forEach(d => params.append('department', d))
+    periods.forEach(p => params.append('period', p))
+    if (!params.toString()) { setResults([]); return }
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/courses?${params}`)
+      setResults(await res.json())
+    } finally {
+      setLoading(false)
+    }
+  }, [query, languages, departments, periods])
+
+  // Always keep a ref to the latest runSearch so debounce never calls a stale version
+  const runSearchRef = useRef(runSearch)
+  useEffect(() => { runSearchRef.current = runSearch }, [runSearch])
+
+  // Auto-search on typing only when no filters active
   useEffect(() => {
+    if (activeFilters > 0) return
     if (debounceRef.current) clearTimeout(debounceRef.current)
-
-    debounceRef.current = setTimeout(async () => {
-      const params = new URLSearchParams()
-      if (query.trim()) params.set('q', query.trim())
-      if (language)   params.set('language', language)
-      if (department) params.set('department', department)
-      if (season)     params.set('season', season)
-
-      if (!params.toString()) { setResults([]); return }
-
-      setLoading(true)
-      try {
-        const res = await fetch(`/api/courses?${params}`)
-        setResults(await res.json())
-      } finally {
-        setLoading(false)
-      }
-    }, 250)
-  }, [query, language, department, season])
+    debounceRef.current = setTimeout(() => runSearchRef.current(), 250)
+  }, [query, activeFilters])
 
   async function handleSelect(courseNumber: string) {
     setSelecting(courseNumber)
@@ -65,19 +126,14 @@ export default function SearchPage({ onSelect, onOpenPlanner }: Props) {
     }
   }
 
-  const activeFilters = [language, department, season].filter(Boolean).length
-
-  const selectStyle: React.CSSProperties = {
-    background: 'var(--surface)',
-    border: '1px solid var(--border)',
-    borderRadius: 8,
-    color: 'var(--text-sec)',
-    padding: '8px 10px',
-    fontSize: 13,
-    outline: 'none',
-    cursor: 'pointer',
-    flex: 1,
-    minWidth: 0,
+  const filterBtnStyle: React.CSSProperties = {
+    position: 'relative',
+    background: filtersOpen || activeFilters > 0 ? 'var(--surface-hover)' : 'var(--surface)',
+    border: `1px solid ${filtersOpen || activeFilters > 0 ? 'var(--text-muted)' : 'var(--border)'}`,
+    borderRadius: 10,
+    color: activeFilters > 0 ? 'var(--text)' : 'var(--text-muted)',
+    width: 50, cursor: 'pointer', flexShrink: 0,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
   }
 
   return (
@@ -116,58 +172,34 @@ export default function SearchPage({ onSelect, onOpenPlanner }: Props) {
               autoFocus
               value={query}
               onChange={e => setQuery(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { if (debounceRef.current) clearTimeout(debounceRef.current); runSearch() } }}
               placeholder="Search by course name or number…"
               style={{
                 width: '100%',
-                background: 'var(--surface)',
-                border: '1px solid var(--border)',
-                borderRadius: 10,
-                color: 'var(--text)',
-                padding: '14px 16px',
-                fontSize: 16,
-                outline: 'none',
-                boxSizing: 'border-box',
+                background: 'var(--surface)', border: '1px solid var(--border)',
+                borderRadius: 10, color: 'var(--text)',
+                padding: '14px 16px', fontSize: 16, outline: 'none', boxSizing: 'border-box',
               }}
             />
             {loading && (
-              <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 13 }}>
-                …
-              </div>
+              <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 13 }}>…</div>
             )}
           </div>
 
-          {/* Filter icon button */}
-          <button
-            onClick={() => setFiltersOpen(o => !o)}
-            title="Filters"
-            style={{
-              position: 'relative',
-              background: filtersOpen || activeFilters > 0 ? 'var(--surface-hover)' : 'var(--surface)',
-              border: `1px solid ${filtersOpen || activeFilters > 0 ? 'var(--text-muted)' : 'var(--border)'}`,
-              borderRadius: 10,
-              color: activeFilters > 0 ? 'var(--text)' : 'var(--text-muted)',
-              width: 48,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {/* Filter button */}
+          <button onClick={() => setFiltersOpen(o => !o)} title="Filters" style={filterBtnStyle}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="4" y1="6" x2="20" y2="6" />
               <line x1="8" y1="12" x2="16" y2="12" />
               <line x1="11" y1="18" x2="13" y2="18" />
             </svg>
             {activeFilters > 0 && (
               <span style={{
-                position: 'absolute', top: 6, right: 6,
+                position: 'absolute', top: 4, right: 4,
                 background: '#cc0000', color: '#fff', borderRadius: '50%',
-                fontSize: 9, fontWeight: 700, width: 14, height: 14,
+                fontSize: 9, fontWeight: 700, width: 13, height: 13,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                {activeFilters}
-              </span>
+              }}>{activeFilters}</span>
             )}
           </button>
         </div>
@@ -182,41 +214,38 @@ export default function SearchPage({ onSelect, onOpenPlanner }: Props) {
               transition={{ duration: 0.2 }}
               style={{ overflow: 'hidden' }}
             >
-              <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
-                <select value={season} onChange={e => setSeason(e.target.value)} style={selectStyle}>
-                  <option value="">All periods</option>
-                  {filters.seasons.map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
+              <div style={{
+                marginTop: 8, padding: '0 16px 12px',
+                background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10,
+              }}>
+                <AccordionFilter label="Period"    options={filterOptions.periods}     selected={periods}     onChange={setPeriods} />
+                <AccordionFilter label="Institute" options={filterOptions.departments} selected={departments} onChange={setDepartments} />
+                <AccordionFilter label="Language"  options={filterOptions.languages}   selected={languages}   onChange={setLanguages} />
 
-                <select value={department} onChange={e => setDepartment(e.target.value)} style={selectStyle}>
-                  <option value="">All institutes</option>
-                  {filters.departments.map(d => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
-
-                <select value={language} onChange={e => setLanguage(e.target.value)} style={selectStyle}>
-                  <option value="">All languages</option>
-                  {filters.languages.map(l => (
-                    <option key={l} value={l}>{l}</option>
-                  ))}
-                </select>
-
-                {activeFilters > 0 && (
+                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                  {activeFilters > 0 && (
+                    <button onClick={() => { setLanguages([]); setDepartments([]); setPeriods([]) }} style={{
+                      flex: 1, background: 'none', border: '1px solid var(--border)', borderRadius: 8,
+                      color: 'var(--text-muted)', padding: '9px', fontSize: 12, cursor: 'pointer',
+                    }}>
+                      Clear
+                    </button>
+                  )}
                   <button
-                    onClick={() => { setLanguage(''); setDepartment(''); setSeason('') }}
+                    onClick={() => { if (debounceRef.current) clearTimeout(debounceRef.current); runSearch() }}
                     style={{
-                      background: 'none', border: '1px solid var(--border)',
-                      color: 'var(--text-muted)', borderRadius: 8,
-                      padding: '8px 10px', fontSize: 12, cursor: 'pointer', flexShrink: 0,
+                      flex: 1, background: 'var(--surface-hover)', border: '1px solid var(--border)',
+                      borderRadius: 8, color: 'var(--text-sec)', padding: '9px',
+                      fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
                     }}
-                    title="Clear filters"
                   >
-                    ✕
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    Search
                   </button>
-                )}
+                </div>
               </div>
             </motion.div>
           )}
@@ -230,11 +259,8 @@ export default function SearchPage({ onSelect, onOpenPlanner }: Props) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               style={{
-                background: 'var(--surface)',
-                border: '1px solid var(--border)',
-                borderRadius: 10,
-                overflow: 'hidden',
-                marginTop: 10,
+                background: 'var(--surface)', border: '1px solid var(--border)',
+                borderRadius: 10, overflow: 'hidden', marginTop: 10,
               }}
             >
               {results.map((r, i) => (
@@ -243,17 +269,10 @@ export default function SearchPage({ onSelect, onOpenPlanner }: Props) {
                   onClick={() => handleSelect(r.course_number)}
                   disabled={selecting === r.course_number}
                   style={{
-                    width: '100%',
-                    background: 'none',
-                    border: 'none',
+                    width: '100%', background: 'none', border: 'none',
                     borderTop: i === 0 ? 'none' : '1px solid var(--border-subtle)',
-                    color: 'var(--text-sec)',
-                    padding: '12px 16px',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
+                    color: 'var(--text-sec)', padding: '12px 16px', textAlign: 'left',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12,
                   }}
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-hover)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'none')}
