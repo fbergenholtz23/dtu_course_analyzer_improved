@@ -1,0 +1,45 @@
+{
+  "name": "dtu_course_analyzer_improved",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon --exec ts-node src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "migrate": "ts-node src/db/migrate.ts",
+    "seed": "ts-node src/scraper/seed.ts",
+    "import": "ts-node src/db/importCsv.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fbergenholtz23/dtu_course_analyzer_improved.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/fbergenholtz23/dtu_course_analyzer_improved/issues"
+  },
+  "homepage": "https://github.com/fbergenholtz23/dtu_course_analyzer_improved#readme",
+  "dependencies": {
+    "axios": "^1.13.6",
+    "cheerio": "^1.2.0",
+    "cors": "^2.8.6",
+    "csv-parse": "^6.2.1",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/cheerio": "^0.22.35",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.5.0",
+    "@types/pg": "^8.20.0",
+    "nodemon": "^3.1.14",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.2"
+  }
+}
