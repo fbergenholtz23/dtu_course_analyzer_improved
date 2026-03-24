@@ -23,9 +23,14 @@ interface PlannedCourse extends CourseDetail {
   selectedSlots: ScheduleSlot[]  // all slots for the chosen season/group
 }
 
+interface SeasonGroup {
+  season?: string
+  slots: ScheduleSlot[]
+}
+
 interface PendingCourse extends CourseDetail {
   color: string
-  slotGroups: ScheduleSlotGroup[]
+  seasonGroups: SeasonGroup[]
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -135,12 +140,25 @@ export default function SchedulePlanner({ onBack }: Props) {
       const slots: ScheduleSlot[] = raw.map(s => ({ ...s, day: DAY_MAP[s.day] ?? s.day }))
       const slotGroups = groupSlots(slots)
 
-      if (slotGroups.length > 1) {
-        // Multiple season/period groups — ask user to pick one
-        setPending({ ...detail, color, slotGroups })
+      // Group periods by season — if a course has F3A + F4B both in Spring,
+      // they should all be added together, not presented as a choice.
+      const bySeason = new Map<string, ScheduleSlot[]>()
+      for (const group of slotGroups) {
+        const key = group.season ?? '__none__'
+        if (!bySeason.has(key)) bySeason.set(key, [])
+        bySeason.get(key)!.push(...group.slots)
+      }
+      const seasonGroups: SeasonGroup[] = [...bySeason.entries()].map(([season, s]) => ({
+        season: season === '__none__' ? undefined : season,
+        slots: s,
+      }))
+
+      if (seasonGroups.length > 1) {
+        // Course runs in multiple semesters — ask user to pick which semester
+        setPending({ ...detail, color, seasonGroups })
       } else {
-        // Zero or one group — add directly with all slots in that group
-        setCourses(prev => [...prev, { ...detail, color, selectedSlots: slotGroups[0]?.slots ?? [] }])
+        // All periods are in the same semester — add all slots directly
+        setCourses(prev => [...prev, { ...detail, color, selectedSlots: seasonGroups[0]?.slots ?? [] }])
       }
     } finally {
       setAdding(null)
@@ -149,7 +167,7 @@ export default function SchedulePlanner({ onBack }: Props) {
     }
   }
 
-  function confirmGroup(group: ScheduleSlotGroup) {
+  function confirmSeason(group: SeasonGroup) {
     if (!pending) return
     setCourses(prev => [...prev, { ...pending, selectedSlots: group.slots }])
     setPending(null)
@@ -485,11 +503,11 @@ export default function SchedulePlanner({ onBack }: Props) {
                 {pending.name}
               </div>
               <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
-                This course is offered in multiple periods — pick one:
+                This course is offered in multiple semesters — pick one:
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {pending.slotGroups.map((group, i) => (
-                  <button key={i} onClick={() => confirmGroup(group)} style={{
+                {pending.seasonGroups.map((group, i) => (
+                  <button key={i} onClick={() => confirmSeason(group)} style={{
                     background: 'none', border: `1px solid ${pending.color}66`,
                     borderRadius: 8, padding: '12px 16px', cursor: 'pointer',
                     textAlign: 'left', color: 'var(--text-sec)',
@@ -504,10 +522,7 @@ export default function SchedulePlanner({ onBack }: Props) {
                     }} />
                     <div>
                       <div style={{ fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                        {group.code && (
-                          <span style={{ fontFamily: 'monospace' }}>{group.code}</span>
-                        )}
-                        {group.season && (
+                        {group.season ? (
                           <span style={{
                             fontSize: 11, fontWeight: 500,
                             color: group.season === 'Spring' ? '#22c55e' : '#f97316',
@@ -517,11 +532,14 @@ export default function SchedulePlanner({ onBack }: Props) {
                           }}>
                             {group.season}
                           </span>
+                        ) : (
+                          <span style={{ color: 'var(--text-sec)' }}>No season info</span>
                         )}
                       </div>
                       <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
                         {group.slots.map((slot, si) => (
                           <div key={si} style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                            {slot.code && <span style={{ fontFamily: 'monospace', marginRight: 4 }}>{slot.code}</span>}
                             {slot.day} · {slot.start}:00–{slot.end}:00
                           </div>
                         ))}
