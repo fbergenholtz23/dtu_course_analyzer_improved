@@ -27,27 +27,27 @@ export default function GradeChart({ distribution }: Props) {
       <BarChart data={data} margin={{ top: 4, right: 0, left: -28, bottom: 0 }}>
         <XAxis
           dataKey="grade"
-          tick={{ fill: '#8b949e', fontSize: 12 }}
+          tick={{ fontSize: 12 }}
           axisLine={false}
           tickLine={false}
         />
         <YAxis
-          tick={{ fill: '#8b949e', fontSize: 11 }}
+          tick={{ fontSize: 11 }}
           axisLine={false}
           tickLine={false}
           allowDecimals={false}
         />
         <Tooltip
-          cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+          cursor={{ fill: 'var(--surface-subtle)', opacity: 0.6 }}
           contentStyle={{
-            background: '#161b22',
-            border: '1px solid #30363d',
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
             borderRadius: 8,
-            color: '#c9d1d9',
+            color: 'var(--text-sec)',
             fontSize: 13,
           }}
-          labelStyle={{ color: '#c9d1d9' }}
-          itemStyle={{ color: '#c9d1d9' }}
+          labelStyle={{ color: 'var(--text-sec)' }}
+          itemStyle={{ color: 'var(--text-sec)' }}
           formatter={(value) => [value, 'students']}
         />
         <Bar dataKey="count" radius={[4, 4, 0, 0]}>

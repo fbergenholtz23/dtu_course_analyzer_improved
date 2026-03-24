@@ -26,12 +26,12 @@ function evalColor(score: number): string {
 function Badge({ children }: { children: React.ReactNode }) {
   return (
     <span style={{
-      background: '#21262d',
-      border: '1px solid #30363d',
+      background: 'var(--surface-subtle)',
+      border: '1px solid var(--border)',
       borderRadius: 6,
       padding: '3px 10px',
       fontSize: 12,
-      color: '#c9d1d9',
+      color: 'var(--text-sec)',
       whiteSpace: 'nowrap',
     }}>
       {children}
@@ -44,8 +44,8 @@ function EvalCard({ label, score, votes }: { label: string; score: number | null
   const color = evalColor(score)
   return (
     <div style={{
-      background: '#161b22',
-      border: '1px solid #30363d',
+      background: 'var(--surface)',
+      border: '1px solid var(--border)',
       borderRadius: 10,
       padding: '14px 16px',
       display: 'flex',
@@ -54,9 +54,9 @@ function EvalCard({ label, score, votes }: { label: string; score: number | null
       flex: 1,
       minWidth: 100,
     }}>
-      <div style={{ fontSize: 22, fontWeight: 700, color }}>{score.toFixed(1)}<span style={{ fontSize: 12, color: '#8b949e' }}>/5</span></div>
-      <div style={{ fontSize: 12, color: '#e6edf3' }}>{label}</div>
-      {votes !== null && <div style={{ fontSize: 11, color: '#8b949e' }}>{votes} responses</div>}
+      <div style={{ fontSize: 22, fontWeight: 700, color }}>{score.toFixed(1)}<span style={{ fontSize: 12, color: 'var(--text-muted)' }}>/5</span></div>
+      <div style={{ fontSize: 12, color: 'var(--text)' }}>{label}</div>
+      {votes !== null && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{votes} responses</div>}
     </div>
   )
 }
@@ -76,7 +76,7 @@ function EvalsSection({ evals }: { evals: CourseEvals }) {
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.12 }}
       style={{ marginBottom: 32 }}
     >
-      <div style={{ fontSize: 13, fontWeight: 600, color: '#8b949e', marginBottom: 12 }}>Student evaluations</div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 12 }}>Student evaluations</div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {metrics.map(m => (
           <EvalCard key={m.label} label={m.label} score={m.score} votes={m.votes} />
@@ -94,8 +94,8 @@ function SnapshotCard({ snap, index }: { snap: GradeSnapshot; index: number }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
       style={{
-        background: '#161b22',
-        border: '1px solid #30363d',
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
         borderRadius: 10,
         padding: '16px 20px',
         display: 'flex',
@@ -103,21 +103,21 @@ function SnapshotCard({ snap, index }: { snap: GradeSnapshot; index: number }) {
         gap: 12,
       }}
     >
-      <div style={{ fontSize: 13, fontWeight: 600, color: '#8b949e' }}>{snap.semester}</div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>{snap.semester}</div>
       <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
         <div>
           <div style={{ fontSize: 30, fontWeight: 700, color, lineHeight: 1 }}>{snap.average.toFixed(1)}</div>
-          <div style={{ fontSize: 11, color: '#8b949e', marginTop: 2 }}>avg</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>avg</div>
         </div>
-        <div style={{ width: 1, height: 32, background: '#30363d' }} />
+        <div style={{ width: 1, height: 32, background: 'var(--border)' }} />
         <div>
-          <div style={{ fontSize: 18, fontWeight: 600, color: '#e6edf3' }}>{Number(snap.pass_percentage).toFixed(1)}%</div>
-          <div style={{ fontSize: 11, color: '#8b949e', marginTop: 2 }}>passed</div>
+          <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--text)' }}>{Number(snap.pass_percentage).toFixed(1)}%</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>passed</div>
         </div>
-        <div style={{ width: 1, height: 32, background: '#30363d' }} />
+        <div style={{ width: 1, height: 32, background: 'var(--border)' }} />
         <div>
-          <div style={{ fontSize: 18, fontWeight: 600, color: '#e6edf3' }}>{snap.participants.toLocaleString()}</div>
-          <div style={{ fontSize: 11, color: '#8b949e', marginTop: 2 }}>students</div>
+          <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--text)' }}>{snap.participants.toLocaleString()}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>students</div>
         </div>
       </div>
       <GradeChart distribution={snap.distribution} />
@@ -139,23 +139,23 @@ export default function CoursePage({ course, onBack }: Props) {
     <div style={{ minHeight: '100vh', paddingBottom: 48 }}>
       {/* Top bar */}
       <div style={{
-        borderBottom: '1px solid #30363d',
+        borderBottom: '1px solid var(--border)',
         padding: '16px 32px',
         display: 'flex',
         alignItems: 'center',
         gap: 16,
         position: 'sticky',
         top: 0,
-        background: '#0d1117',
+        background: 'var(--bg)',
         zIndex: 10,
       }}>
         <button onClick={onBack} style={{
-          background: 'none', border: '1px solid #30363d', color: '#8b949e',
+          background: 'none', border: '1px solid var(--border)', color: 'var(--text-muted)',
           padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontSize: 13,
         }}>
           ← Back
         </button>
-        <span style={{ fontWeight: 700, fontSize: 16, color: '#e6edf3' }}>
+        <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>
           <span style={{ color: '#cc0000' }}>DTU</span> Grades
         </span>
       </div>
@@ -163,8 +163,8 @@ export default function CoursePage({ course, onBack }: Props) {
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: '32px 24px 0' }}>
         {/* Course header */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-          <div style={{ fontSize: 13, color: '#8b949e', marginBottom: 4 }}>{course.course_number}</div>
-          <div style={{ fontSize: 28, fontWeight: 700, color: '#e6edf3', marginBottom: 16 }}>{course.name}</div>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 4 }}>{course.course_number}</div>
+          <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--text)', marginBottom: 16 }}>{course.name}</div>
 
           {/* Info badges */}
           {info && (
@@ -185,15 +185,15 @@ export default function CoursePage({ course, onBack }: Props) {
             <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{
                 width: 36, height: 36, borderRadius: '50%',
-                background: '#21262d', border: '1px solid #30363d',
+                background: 'var(--surface-subtle)', border: '1px solid var(--border)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 14, color: '#8b949e', fontWeight: 600, flexShrink: 0,
+                fontSize: 14, color: 'var(--text-muted)', fontWeight: 600, flexShrink: 0,
               }}>
                 {info.responsibleName.split(' ').map(w => w[0]).slice(0, 2).join('')}
               </div>
               <div>
-                <div style={{ fontSize: 14, color: '#e6edf3' }}>{info.responsibleName}</div>
-                <div style={{ fontSize: 12, color: '#8b949e' }}>Course responsible</div>
+                <div style={{ fontSize: 14, color: 'var(--text)' }}>{info.responsibleName}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Course responsible</div>
               </div>
             </div>
           )}
@@ -210,9 +210,9 @@ export default function CoursePage({ course, onBack }: Props) {
               { label: 'Latest pass rate', value: `${Number(latest.pass_percentage).toFixed(1)}%` },
               { label: 'Semesters of data', value: snapshots.length.toString() },
             ].map(s => (
-              <div key={s.label} style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 10, padding: '16px 20px' }}>
-                <div style={{ fontSize: 26, fontWeight: 700, color: s.color ?? '#e6edf3' }}>{s.value}</div>
-                <div style={{ fontSize: 12, color: '#8b949e', marginTop: 4 }}>{s.label}</div>
+              <div key={s.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '16px 20px' }}>
+                <div style={{ fontSize: 26, fontWeight: 700, color: s.color ?? 'var(--text)' }}>{s.value}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{s.label}</div>
               </div>
             ))}
           </motion.div>
@@ -225,10 +225,10 @@ export default function CoursePage({ course, onBack }: Props) {
         {info?.description && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.13 }}
-            style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 10, padding: '20px 24px', marginBottom: 32 }}
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '20px 24px', marginBottom: 32 }}
           >
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#8b949e', marginBottom: 10 }}>Description</div>
-            <div style={{ fontSize: 14, color: '#c9d1d9', lineHeight: 1.7 }}
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 10 }}>Description</div>
+            <div style={{ fontSize: 14, color: 'var(--text-sec)', lineHeight: 1.7 }}
               dangerouslySetInnerHTML={{ __html: info.description }} />
           </motion.div>
         )}
@@ -237,19 +237,19 @@ export default function CoursePage({ course, onBack }: Props) {
         {(info?.prerequisites || info?.mandatoryPrerequisites) && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.14 }}
-            style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 10, padding: '20px 24px', marginBottom: 32 }}
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '20px 24px', marginBottom: 32 }}
           >
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#8b949e', marginBottom: 10 }}>Prerequisites</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 10 }}>Prerequisites</div>
             {info.mandatoryPrerequisites && (
               <div style={{ marginBottom: 8 }}>
                 <span style={{ fontSize: 12, color: '#f97316', marginRight: 8 }}>Required</span>
-                <span style={{ fontSize: 14, color: '#c9d1d9' }}>{info.mandatoryPrerequisites}</span>
+                <span style={{ fontSize: 14, color: 'var(--text-sec)' }}>{info.mandatoryPrerequisites}</span>
               </div>
             )}
             {info.prerequisites && (
               <div>
-                <span style={{ fontSize: 12, color: '#8b949e', marginRight: 8 }}>Recommended</span>
-                <span style={{ fontSize: 14, color: '#c9d1d9' }}>{info.prerequisites}</span>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', marginRight: 8 }}>Recommended</span>
+                <span style={{ fontSize: 14, color: 'var(--text-sec)' }}>{info.prerequisites}</span>
               </div>
             )}
           </motion.div>
@@ -259,9 +259,9 @@ export default function CoursePage({ course, onBack }: Props) {
         {trendData.length > 1 && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}
-            style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 10, padding: '20px 24px', marginBottom: 32 }}
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '20px 24px', marginBottom: 32 }}
           >
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#8b949e', marginBottom: 16 }}>Average grade over time</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 16 }}>Average grade over time</div>
             <ResponsiveContainer width="100%" height={160}>
               <LineChart data={trendData}>
                 <defs>
@@ -275,13 +275,13 @@ export default function CoursePage({ course, onBack }: Props) {
                     <stop offset="100%" stopColor="#dc2626" /> {/* 0  */}
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="semester" tick={{ fill: '#8b949e', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis domain={[0, 12]} ticks={[0, 2, 4, 7, 10, 12]} tick={{ fill: '#8b949e', fontSize: 11 }} axisLine={false} tickLine={false} width={24} />
+                <XAxis dataKey="semester" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 12]} ticks={[0, 2, 4, 7, 10, 12]} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={24} />
                 <Tooltip
-                  contentStyle={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 8, color: '#c9d1d9', fontSize: 13 }}
+                  contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-sec)', fontSize: 13 }}
                   formatter={(v) => [v, 'avg grade']}
                 />
-                <ReferenceLine y={2} stroke="#30363d" strokeDasharray="3 3" />
+                <ReferenceLine y={2} strokeDasharray="3 3" className="recharts-ref-line" />
                 <Line
                   type="monotone"
                   dataKey="average"
@@ -289,7 +289,7 @@ export default function CoursePage({ course, onBack }: Props) {
                   strokeWidth={2}
                   dot={(props: any) => (
                     <circle key={props.key} cx={props.cx} cy={props.cy} r={4}
-                      fill={gradeColor(props.value)} stroke="#0d1117" strokeWidth={1} />
+                      fill={gradeColor(props.value)} style={{ stroke: 'var(--surface)' }} strokeWidth={1} />
                   )}
                 />
               </LineChart>

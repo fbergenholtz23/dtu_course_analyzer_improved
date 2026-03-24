@@ -4,22 +4,28 @@ import type { CourseDetail, CourseSearchResult } from '../types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface PlannedCourse extends CourseDetail {
-  color: string
-  selectedSlot: ScheduleSlot  // the single slot the user chose
-}
-
-interface PendingCourse extends CourseDetail {
-  color: string
-  slots: ScheduleSlot[]
-}
-
 interface ScheduleSlot {
   code?: string
   season?: string
   day: string
   start: number
   end: number
+}
+
+interface ScheduleSlotGroup {
+  code?: string
+  season?: string
+  slots: ScheduleSlot[]
+}
+
+interface PlannedCourse extends CourseDetail {
+  color: string
+  selectedSlots: ScheduleSlot[]  // all slots for the chosen season/group
+}
+
+interface PendingCourse extends CourseDetail {
+  color: string
+  slotGroups: ScheduleSlotGroup[]
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -49,7 +55,43 @@ function parseSchedule(schedule: string | null | undefined): ScheduleSlot[] {
   return slots
 }
 
+// Group slots by their schedule code.
+// If both the A and B variants of a period are present (same season), they are merged
+// into a single group under the base code (e.g. E5A + E5B → E5), because together they
+// represent the full period. If only one variant is present, it is kept as-is.
+// Slots without a code are grouped by season, or all together if no season either.
+function groupSlots(slots: ScheduleSlot[]): ScheduleSlotGroup[] {
+  // First pass: group by exact code
+  const byCode = new Map<string, ScheduleSlotGroup>()
+  for (const slot of slots) {
+    const key = slot.code ?? slot.season ?? '__all__'
+    if (!byCode.has(key)) {
+      byCode.set(key, { code: slot.code, season: slot.season, slots: [] })
+    }
+    byCode.get(key)!.slots.push(slot)
+  }
 
+  // Second pass: merge XnA + XnB pairs when both exist and share the same season
+  const result: ScheduleSlotGroup[] = []
+  const consumed = new Set<string>()
+  for (const [key, group] of byCode) {
+    if (consumed.has(key)) continue
+    const base = key.replace(/[AB]$/, '')
+    if (base !== key) {
+      const partner = key.endsWith('A') ? base + 'B' : base + 'A'
+      const partnerGroup = byCode.get(partner)
+      if (partnerGroup && partnerGroup.season === group.season) {
+        result.push({ code: base, season: group.season, slots: [...group.slots, ...partnerGroup.slots] })
+        consumed.add(key)
+        consumed.add(partner)
+        continue
+      }
+    }
+    result.push(group)
+    consumed.add(key)
+  }
+  return result
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -91,12 +133,14 @@ export default function SchedulePlanner({ onBack }: Props) {
       const color = COLORS[courses.length % COLORS.length]
       const raw = detail.info?.scheduleSlots ?? parseSchedule(detail.info?.schedule)
       const slots: ScheduleSlot[] = raw.map(s => ({ ...s, day: DAY_MAP[s.day] ?? s.day }))
-      if (slots.length > 1) {
-        // Multiple slots — ask user to pick one
-        setPending({ ...detail, color, slots })
+      const slotGroups = groupSlots(slots)
+
+      if (slotGroups.length > 1) {
+        // Multiple season/period groups — ask user to pick one
+        setPending({ ...detail, color, slotGroups })
       } else {
-        // Zero or one slot — add directly
-        setCourses(prev => [...prev, { ...detail, color, selectedSlot: slots[0] ?? null as any }])
+        // Zero or one group — add directly with all slots in that group
+        setCourses(prev => [...prev, { ...detail, color, selectedSlots: slotGroups[0]?.slots ?? [] }])
       }
     } finally {
       setAdding(null)
@@ -105,9 +149,9 @@ export default function SchedulePlanner({ onBack }: Props) {
     }
   }
 
-  function confirmSlot(slot: ScheduleSlot) {
+  function confirmGroup(group: ScheduleSlotGroup) {
     if (!pending) return
-    setCourses(prev => [...prev, { ...pending, selectedSlot: slot }])
+    setCourses(prev => [...prev, { ...pending, selectedSlots: group.slots }])
     setPending(null)
   }
 
@@ -115,17 +159,20 @@ export default function SchedulePlanner({ onBack }: Props) {
     setCourses(prev => prev.filter(c => c.course_number !== courseNumber))
   }
 
-  const specialCourses = courses.filter(c => !c.selectedSlot)
+  const specialCourses = courses.filter(c => !c.selectedSlots?.length)
 
   // Find courses that overlap with another course on the same day
   const overlappingCourseNumbers = new Set<string>()
-  const scheduled = courses.filter(c => c.selectedSlot)
+  const scheduled = courses.filter(c => c.selectedSlots?.length)
   for (let i = 0; i < scheduled.length; i++) {
     for (let j = i + 1; j < scheduled.length; j++) {
-      const a = scheduled[i].selectedSlot, b = scheduled[j].selectedSlot
-      if (a.day === b.day && a.start < b.end && a.end > b.start) {
-        overlappingCourseNumbers.add(scheduled[i].course_number)
-        overlappingCourseNumbers.add(scheduled[j].course_number)
+      for (const a of scheduled[i].selectedSlots) {
+        for (const b of scheduled[j].selectedSlots) {
+          if (a.day === b.day && a.start < b.end && a.end > b.start) {
+            overlappingCourseNumbers.add(scheduled[i].course_number)
+            overlappingCourseNumbers.add(scheduled[j].course_number)
+          }
+        }
       }
     }
   }
@@ -134,17 +181,17 @@ export default function SchedulePlanner({ onBack }: Props) {
     <div style={{ minHeight: '100vh', paddingBottom: 48 }}>
       {/* Top bar */}
       <div style={{
-        borderBottom: '1px solid #30363d', padding: '16px 32px',
+        borderBottom: '1px solid var(--border)', padding: '16px 72px 16px 32px',
         display: 'flex', alignItems: 'center', gap: 16,
-        position: 'sticky', top: 0, background: '#0d1117', zIndex: 10,
+        position: 'sticky', top: 0, background: 'var(--bg)', zIndex: 10,
       }}>
         <button onClick={onBack} style={{
-          background: 'none', border: '1px solid #30363d', color: '#8b949e',
+          background: 'none', border: '1px solid var(--border)', color: 'var(--text-muted)',
           padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontSize: 13,
         }}>
           ← Back
         </button>
-        <span style={{ fontWeight: 700, fontSize: 16, color: '#e6edf3' }}>
+        <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>
           <span style={{ color: '#cc0000' }}>DTU</span> Schedule Planner
         </span>
 
@@ -155,14 +202,14 @@ export default function SchedulePlanner({ onBack }: Props) {
             onChange={e => setQuery(e.target.value)}
             placeholder="Add a course…"
             style={{
-              width: '100%', background: '#161b22', border: '1px solid #30363d',
+              width: '100%', background: 'var(--surface)', border: '1px solid var(--border)',
               borderRadius: results.length > 0 ? '8px 8px 0 0' : 8,
-              color: '#e6edf3', padding: '8px 12px', fontSize: 14,
+              color: 'var(--text)', padding: '8px 12px', fontSize: 14,
               outline: 'none', boxSizing: 'border-box',
             }}
           />
           {loading && (
-            <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#8b949e', fontSize: 12 }}>…</span>
+            <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 12 }}>…</span>
           )}
           <AnimatePresence>
             {results.length > 0 && (
@@ -170,7 +217,7 @@ export default function SchedulePlanner({ onBack }: Props) {
                 initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                 style={{
                   position: 'absolute', top: '100%', left: 0, right: 0,
-                  background: '#161b22', border: '1px solid #30363d',
+                  background: 'var(--surface)', border: '1px solid var(--border)',
                   borderTop: 'none', borderRadius: '0 0 8px 8px',
                   zIndex: 100, maxHeight: 240, overflowY: 'auto',
                 }}
@@ -182,18 +229,18 @@ export default function SchedulePlanner({ onBack }: Props) {
                       disabled={already || adding === r.course_number}
                       style={{
                         width: '100%', background: 'none', border: 'none',
-                        borderTop: i === 0 ? 'none' : '1px solid #21262d',
-                        color: already ? '#8b949e' : '#c9d1d9',
+                        borderTop: i === 0 ? 'none' : '1px solid var(--border-subtle)',
+                        color: already ? 'var(--text-muted)' : 'var(--text-sec)',
                         padding: '10px 12px', textAlign: 'left', cursor: already ? 'default' : 'pointer',
                         display: 'flex', alignItems: 'center', gap: 10, fontSize: 13,
                       }}
-                      onMouseEnter={e => { if (!already) e.currentTarget.style.background = '#1c2128' }}
+                      onMouseEnter={e => { if (!already) e.currentTarget.style.background = 'var(--surface-hover)' }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
                     >
-                      <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#8b949e', minWidth: 44 }}>{r.course_number}</span>
+                      <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--text-muted)', minWidth: 44 }}>{r.course_number}</span>
                       <span>{r.name}</span>
-                      {already && <span style={{ marginLeft: 'auto', fontSize: 11, color: '#8b949e' }}>added</span>}
-                      {adding === r.course_number && <span style={{ marginLeft: 'auto', fontSize: 11, color: '#8b949e' }}>…</span>}
+                      {already && <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)' }}>added</span>}
+                      {adding === r.course_number && <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)' }}>…</span>}
                     </button>
                   )
                 })}
@@ -211,17 +258,17 @@ export default function SchedulePlanner({ onBack }: Props) {
             {courses.map(c => (
               <div key={c.course_number} style={{
                 display: 'flex', alignItems: 'center', gap: 8,
-                background: '#161b22', border: `1px solid ${overlappingCourseNumbers.has(c.course_number) ? '#f97316' : '#30363d'}`,
+                background: 'var(--surface)', border: `1px solid ${overlappingCourseNumbers.has(c.course_number) ? '#f97316' : 'var(--border)'}`,
                 borderRadius: 8, padding: '6px 10px',
               }}>
                 <div style={{ width: 10, height: 10, borderRadius: '50%', background: c.color, flexShrink: 0 }} />
-                <span style={{ fontSize: 12, color: '#8b949e', fontFamily: 'monospace' }}>{c.course_number}</span>
-                <span style={{ fontSize: 13, color: '#c9d1d9' }}>{c.name}</span>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{c.course_number}</span>
+                <span style={{ fontSize: 13, color: 'var(--text-sec)' }}>{c.name}</span>
                 {overlappingCourseNumbers.has(c.course_number) && (
                   <span style={{ fontSize: 11, color: '#f97316' }}>⚠ overlap</span>
                 )}
                 <button onClick={() => removeCourse(c.course_number)} style={{
-                  background: 'none', border: 'none', color: '#8b949e', cursor: 'pointer',
+                  background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer',
                   fontSize: 14, padding: '0 2px', lineHeight: 1,
                 }}>×</button>
               </div>
@@ -233,7 +280,8 @@ export default function SchedulePlanner({ onBack }: Props) {
         {(() => {
           const HOUR_H = 52        // px per hour
           const START_H = 8        // first hour shown
-          const END_H = 18         // last hour shown
+          const maxCourseEnd = courses.flatMap(c => c.selectedSlots ?? []).reduce((max, s) => Math.max(max, s.end), 0)
+          const END_H = Math.max(18, maxCourseEnd)  // at least 18, extends if a course runs later
           const TOTAL_H = (END_H - START_H) * HOUR_H
           const LABEL_W = 48
           const hours = Array.from({ length: END_H - START_H + 1 }, (_, i) => START_H + i)
@@ -245,8 +293,8 @@ export default function SchedulePlanner({ onBack }: Props) {
                 {DAYS.map(day => (
                   <div key={day} style={{
                     flex: 1, textAlign: 'center', fontSize: 13,
-                    fontWeight: 600, color: '#8b949e', paddingBottom: 8,
-                    borderBottom: '1px solid #30363d',
+                    fontWeight: 600, color: 'var(--text-muted)', paddingBottom: 8,
+                    borderBottom: '1px solid var(--border)',
                   }}>
                     {day}
                   </div>
@@ -256,50 +304,80 @@ export default function SchedulePlanner({ onBack }: Props) {
               {/* Time grid */}
               <div style={{ display: 'flex' }}>
                 {/* Hour labels */}
-                <div style={{ width: LABEL_W, flexShrink: 0, position: 'relative', height: TOTAL_H }}>
-                  {hours.map(h => (
-                    <div key={h} style={{
-                      position: 'absolute',
-                      top: (h - START_H) * HOUR_H - 8,
-                      right: 8,
-                      fontSize: 11,
-                      color: '#8b949e',
-                      userSelect: 'none',
-                    }}>
-                      {h}:00
-                    </div>
-                  ))}
-                </div>
+                <motion.div
+                  animate={{ height: TOTAL_H }}
+                  transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
+                  style={{ width: LABEL_W, flexShrink: 0, position: 'relative', overflow: 'visible' }}
+                >
+                  <AnimatePresence>
+                    {hours.map(h => (
+                      <motion.div
+                        key={h}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        style={{
+                          position: 'absolute',
+                          top: (h - START_H) * HOUR_H - 8,
+                          right: 8,
+                          fontSize: 11,
+                          color: 'var(--text-muted)',
+                          userSelect: 'none',
+                        }}
+                      >
+                        {h}:00
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </motion.div>
 
                 {/* Day columns */}
                 <div style={{ flex: 1, display: 'flex', position: 'relative' }}>
                   {/* Horizontal hour lines spanning all columns */}
                   <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-                    {hours.map(h => (
-                      <div key={h} style={{
-                        position: 'absolute',
-                        top: (h - START_H) * HOUR_H,
-                        left: 0, right: 0,
-                        borderTop: `1px solid ${h === START_H ? '#30363d' : '#21262d'}`,
-                      }} />
-                    ))}
+                    <AnimatePresence>
+                      {hours.map(h => (
+                        <motion.div
+                          key={h}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.25 }}
+                          style={{
+                            position: 'absolute',
+                            top: (h - START_H) * HOUR_H,
+                            left: 0, right: 0,
+                            borderTop: `1px solid ${h === START_H ? 'var(--border)' : 'var(--border-subtle)'}`,
+                          }}
+                        />
+                      ))}
+                    </AnimatePresence>
                     {/* Bottom border */}
-                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, borderTop: '1px solid #30363d' }} />
+                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, borderTop: '1px solid var(--border)' }} />
                   </div>
 
                   {DAYS.map((day, di) => {
-                    const dayCourses = courses
-                      .filter(c => c.selectedSlot?.day === day)
-                      .map(c => ({ ...c, slot: c.selectedSlot }))
+                    // Expand to one entry per slot on this day (a course can have multiple)
+                    const dayCourses = courses.flatMap(c =>
+                      (c.selectedSlots ?? [])
+                        .filter(s => s.day === day)
+                        .map(slot => ({ ...c, slot }))
+                    )
 
                     return (
-                      <div key={day} style={{
-                        flex: 1,
-                        position: 'relative',
-                        height: TOTAL_H,
-                        borderLeft: di === 0 ? '1px solid #30363d' : '1px solid #21262d',
-                        borderRight: di === DAYS.length - 1 ? '1px solid #30363d' : 'none',
-                      }}>
+                      <motion.div
+                        key={day}
+                        animate={{ height: TOTAL_H }}
+                        transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
+                        style={{
+                          flex: 1,
+                          position: 'relative',
+                          overflow: 'hidden',
+                          borderLeft: di === 0 ? '1px solid var(--border)' : '1px solid var(--border-subtle)',
+                          borderRight: di === DAYS.length - 1 ? '1px solid var(--border)' : 'none',
+                        }}
+                      >
                         {dayCourses.map(({ slot, ...c }) => {
                           const top = (slot.start - START_H) * HOUR_H
                           const height = (slot.end - slot.start) * HOUR_H
@@ -330,16 +408,16 @@ export default function SchedulePlanner({ onBack }: Props) {
                               <div style={{ fontSize: 11, fontWeight: 700, color: c.color, fontFamily: 'monospace' }}>
                                 {c.course_number}
                               </div>
-                              <div style={{ fontSize: 11, color: '#c9d1d9', lineHeight: 1.3, marginTop: 2 }} title={c.name}>
+                              <div style={{ fontSize: 11, color: 'var(--text-sec)', lineHeight: 1.3, marginTop: 2 }} title={c.name}>
                                 {c.name.length > 28 ? c.name.slice(0, 28) + '…' : c.name}
                               </div>
-                              <div style={{ fontSize: 10, color: '#8b949e', marginTop: 4 }}>
+                              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
                                 {slot.start}:00–{slot.end}:00
                               </div>
                             </motion.div>
                           )
                         })}
-                      </div>
+                      </motion.div>
                     )
                   })}
                 </div>
@@ -351,7 +429,7 @@ export default function SchedulePlanner({ onBack }: Props) {
         {/* Special / unscheduled courses */}
         {specialCourses.length > 0 && (
           <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#8b949e', marginBottom: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 12 }}>
               Special / unscheduled courses
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -362,8 +440,8 @@ export default function SchedulePlanner({ onBack }: Props) {
                   borderRadius: 6, padding: '8px 12px',
                 }}>
                   <div style={{ fontSize: 11, fontFamily: 'monospace', color: c.color }}>{c.course_number}</div>
-                  <div style={{ fontSize: 13, color: '#c9d1d9' }}>{c.name}</div>
-                  <div style={{ fontSize: 11, color: '#8b949e', marginTop: 2 }}>
+                  <div style={{ fontSize: 13, color: 'var(--text-sec)' }}>{c.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
                     {c.info?.schedule ?? 'No schedule info'}
                   </div>
                 </div>
@@ -374,13 +452,13 @@ export default function SchedulePlanner({ onBack }: Props) {
 
         {/* Empty state */}
         {courses.length === 0 && !pending && (
-          <div style={{ textAlign: 'center', color: '#8b949e', marginTop: 80, fontSize: 14 }}>
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: 80, fontSize: 14 }}>
             Search for courses above to build your schedule
           </div>
         )}
       </div>
 
-      {/* Slot picker modal */}
+      {/* Slot group picker modal */}
       <AnimatePresence>
         {pending && (
           <motion.div
@@ -396,57 +474,65 @@ export default function SchedulePlanner({ onBack }: Props) {
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
               onClick={e => e.stopPropagation()}
               style={{
-                background: '#161b22', border: '1px solid #30363d', borderRadius: 12,
-                padding: 24, width: 360, maxWidth: '90vw',
+                background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
+                padding: 24, width: 400, maxWidth: '90vw',
               }}
             >
-              <div style={{ fontSize: 13, color: '#8b949e', marginBottom: 4, fontFamily: 'monospace' }}>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 4, fontFamily: 'monospace' }}>
                 {pending.course_number}
               </div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#e6edf3', marginBottom: 4 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
                 {pending.name}
               </div>
-              <div style={{ fontSize: 13, color: '#8b949e', marginBottom: 20 }}>
-                This course has multiple schedule groups — pick one:
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
+                This course is offered in multiple periods — pick one:
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {pending.slots.map((slot, i) => (
-                  <button key={i} onClick={() => confirmSlot(slot)} style={{
+                {pending.slotGroups.map((group, i) => (
+                  <button key={i} onClick={() => confirmGroup(group)} style={{
                     background: 'none', border: `1px solid ${pending.color}66`,
                     borderRadius: 8, padding: '12px 16px', cursor: 'pointer',
-                    textAlign: 'left', color: '#c9d1d9',
-                    display: 'flex', alignItems: 'center', gap: 12,
+                    textAlign: 'left', color: 'var(--text-sec)',
+                    display: 'flex', alignItems: 'flex-start', gap: 12,
                   }}
                     onMouseEnter={e => { e.currentTarget.style.background = pending.color + '18' }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
                   >
                     <div style={{
                       width: 10, height: 10, borderRadius: '50%',
-                      background: pending.color, flexShrink: 0,
+                      background: pending.color, flexShrink: 0, marginTop: 4,
                     }} />
                     <div>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>
-                        {slot.day}
-                        {slot.season && (
+                      <div style={{ fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        {group.code && (
+                          <span style={{ fontFamily: 'monospace' }}>{group.code}</span>
+                        )}
+                        {group.season && (
                           <span style={{
-                            marginLeft: 8, fontSize: 11, fontWeight: 500,
-                            color: slot.season === 'Spring' ? '#22c55e' : '#f97316',
-                            background: slot.season === 'Spring' ? '#22c55e18' : '#f9741618',
-                            border: `1px solid ${slot.season === 'Spring' ? '#22c55e44' : '#f9741644'}`,
+                            fontSize: 11, fontWeight: 500,
+                            color: group.season === 'Spring' ? '#22c55e' : '#f97316',
+                            background: group.season === 'Spring' ? '#22c55e18' : '#f9741618',
+                            border: `1px solid ${group.season === 'Spring' ? '#22c55e44' : '#f9741644'}`,
                             borderRadius: 4, padding: '1px 6px',
                           }}>
-                            {slot.season}
+                            {group.season}
                           </span>
                         )}
                       </div>
-                      <div style={{ fontSize: 12, color: '#8b949e' }}>{slot.start}:00–{slot.end}:00</div>
+                      <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {group.slots.map((slot, si) => (
+                          <div key={si} style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                            {slot.day} · {slot.start}:00–{slot.end}:00
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </button>
                 ))}
               </div>
               <button onClick={() => setPending(null)} style={{
                 marginTop: 16, background: 'none', border: 'none',
-                color: '#8b949e', fontSize: 13, cursor: 'pointer', width: '100%',
+                color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', width: '100%',
               }}>
                 Cancel
               </button>

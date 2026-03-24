@@ -10,20 +10,20 @@
   --border:         #30363d;
   --border-subtle:  #21262d;
   --text:           #e6edf3;
-  --text-sec:       #c9d1d9;
-  --text-muted:     #8b949e;
+  --text-sec: #dee6f1;
+  --text-muted: #cee1e6;
 }
 
 body.light {
-  --bg:             #ffffff;
+  --bg: #fff6f6;
   --surface:        #f6f8fa;
   --surface-hover:  #eaeef2;
   --surface-subtle: #eaeef2;
   --border:         #d0d7de;
   --border-subtle:  #e1e4e8;
-  --text:           #1f2328;
-  --text-sec:       #24292f;
-  --text-muted:     #636c76;
+  --text: #201b1b;
+  --text-sec: #2a2b33;
+  --text-muted: #2e3035;
 }
 
 body {
@@ -33,4 +33,13 @@ body {
   font-family: system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   transition: background 0.15s, color 0.15s;
+}
+
+/* Recharts SVG elements — fill/stroke attrs can't use CSS vars, so override via CSS */
+.recharts-cartesian-axis-tick text {
+  fill: var(--text-muted);
+  transition: fill 0.15s;
+}
+.recharts-ref-line line {
+  stroke: var(--border);
 }
