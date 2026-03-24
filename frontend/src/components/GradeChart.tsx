@@ -46,6 +46,8 @@ export default function GradeChart({ distribution }: Props) {
             color: '#c9d1d9',
             fontSize: 13,
           }}
+          labelStyle={{ color: '#c9d1d9' }}
+          itemStyle={{ color: '#c9d1d9' }}
           formatter={(value) => [value, 'students']}
         />
         <Bar dataKey="count" radius={[4, 4, 0, 0]}>

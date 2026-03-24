@@ -63,7 +63,7 @@ class EvalFormatter:
                     # Sum up data from scraped_evaluation_dict and
                     # add it to course_evaluations and semester_evaluations
                     key = course_semesters[i]+'_'+EVAL_TYPES[j]
-                    if (key in scraped_evals) and (scraped_evals[key] is not None):
+                    if (key in scraped_evals) and isinstance(scraped_evals[key], list):
                         eval_data = scraped_evals[key]
                         for k in range (0, len(eval_data)):
                             semester_eval_raw[EVAL_TYPES[j]][str(k+1)] += eval_data[k]

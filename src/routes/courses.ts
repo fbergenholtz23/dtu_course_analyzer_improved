@@ -26,7 +26,7 @@ router.get('/courses/:number', async (req: Request, res: Response) => {
     const courseNumber = req.params.number
 
     const courseRes = await pool.query(
-        `SELECT course_number, name FROM courses WHERE course_number = $1`,
+        `SELECT course_number, name, info, evals FROM courses WHERE course_number = $1`,
         [courseNumber]
     )
     if (courseRes.rows.length === 0) {

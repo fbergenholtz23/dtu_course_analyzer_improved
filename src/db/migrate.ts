@@ -8,6 +8,9 @@ async function migrate() {
             updated_at    TIMESTAMPTZ DEFAULT NOW()
         );
 
+        ALTER TABLE courses ADD COLUMN IF NOT EXISTS info  JSONB;
+        ALTER TABLE courses ADD COLUMN IF NOT EXISTS evals JSONB;
+
         CREATE TABLE IF NOT EXISTS grade_snapshots (
             id                SERIAL PRIMARY KEY,
             course_number     VARCHAR(10) NOT NULL REFERENCES courses(course_number) ON DELETE CASCADE,

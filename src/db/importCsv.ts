@@ -25,6 +25,100 @@ function toInt(val: string): number {
     return isNaN(n) ? 0 : n
 }
 
+function pickFirst(row: Record<string, string>, ...cols: string[]): string | null {
+    for (const col of cols) {
+        const v = row[col]?.trim()
+        if (v && v !== 'None' && v !== 'No data') return v
+    }
+    return null
+}
+
+function binaryToText(row: Record<string, string>, map: [string, string][]): string | null {
+    for (const [col, label] of map) {
+        if (row[col] === '1') return label
+    }
+    return null
+}
+
+function binaryToList(row: Record<string, string>, map: [string, string][]): string[] {
+    return map.filter(([col]) => row[col] === '1').map(([, label]) => label)
+}
+
+// Parse the individual binary slot columns, e.g. "F4A (Spring, Tues 13-17)" = 1
+const SLOT_REGEX = /^([EF]\d+[AB]?) \((Spring|Autumn), (Mon|Tues|Wed|Thurs|Fri) (\d+)-(\d+)\)$/
+const SLOT_DAY_LONG: Record<string, string> = {
+    Mon: 'Monday', Tues: 'Tuesday', Wed: 'Wednesday', Thurs: 'Thursday', Fri: 'Friday',
+}
+
+function buildScheduleSlots(row: Record<string, string>) {
+    const slots: { code: string; season: string; day: string; start: number; end: number }[] = []
+    for (const [col, val] of Object.entries(row)) {
+        if (val !== '1') continue
+        const m = col.match(SLOT_REGEX)
+        if (!m) continue
+        slots.push({ code: m[1], season: m[2], day: SLOT_DAY_LONG[m[3]] ?? m[3], start: parseInt(m[4]), end: parseInt(m[5]) })
+    }
+    return slots.length > 0 ? slots : null
+}
+
+function buildInfo(row: Record<string, string>) {
+    return {
+        ects:                  toNum(row['ECTS_POINTS']) || null,
+        language:              binaryToText(row, [['Danish', 'Danish'], ['English', 'English']]),
+        gradeType:             binaryToText(row, [['SEVEN_STEP_SCALE', '7-step'], ['PASS_OR_FAIL', 'Pass/Fail']]),
+        examType:              binaryToList(row, [['Written exam', 'Written exam'], ['Oral exam', 'Oral exam'], ['Report hand-in', 'Report hand-in']]),
+        examAid:               binaryToText(row, [['All aid', 'All aid'], ['No computers', 'No computers'], ['No aid', 'No aid']]),
+        assignments:           binaryToList(row, [
+                                   ['Mandatory reports', 'Mandatory reports'],
+                                   ['Mandatory exercises', 'Mandatory exercises'],
+                                   ['Mandatory experiments', 'Mandatory experiments'],
+                               ]),
+        campus:                binaryToList(row, [['CAMPUS_LYNGBY', 'Lyngby'], ['CAMPUS_BALLERUP', 'Ballerup']]),
+        courseType:            binaryToList(row, [['BSc', 'BSc'], ['Ph.D.', 'Ph.D.']]),
+        schedule:              pickFirst(row, 'TIMETABLE_PLACEMENT'),
+        scheduleSlots:         buildScheduleSlots(row),
+        semesterPeriod:        pickFirst(row, 'SEMESTER_PERIOD'),
+        duration:              pickFirst(row, 'COURSE_DURATION'),
+        description:           pickFirst(row, 'COURSE_DESCRIPTION'),
+        learningObjectives:    pickFirst(row, 'LEARNING_OBJECTIVES'),
+        content:               pickFirst(row, 'COURSE_CONTENT'),
+        remarks:               pickFirst(row, 'REMARKS'),
+        prerequisites:         pickFirst(row, 'RECOMMENDED_PREREQUISITES'),
+        mandatoryPrerequisites: pickFirst(row, 'MANDATORY_PREREQUISITES'),
+        department:            pickFirst(row, 'DEPARTMENT_RESPONSIBLE'),
+        responsibleName:       pickFirst(row, 'MAIN_RESPONSIBLE_NAME'),
+        scopeAndForm:          pickFirst(row, 'SCOPE_AND_FORM'),
+        homePage:              pickFirst(row, 'HOME_PAGE'),
+    }
+}
+
+function evalScore(row: Record<string, string>, col: string): number | null {
+    const v = parseFloat(row[col])
+    return isNaN(v) ? null : v
+}
+
+function evalVotes(row: Record<string, string>, col: string): number | null {
+    const v = parseInt(row[col], 10)
+    return isNaN(v) ? null : v
+}
+
+function buildEvals(row: Record<string, string>) {
+    const metric = (name: string) => ({
+        score: evalScore(row, `${name}_AVERAGE_SCORE`),
+        votes: evalVotes(row, `${name}_VOTES`),
+    })
+    const r = {
+        learning:   metric('LEARNING'),
+        motivation: metric('MOTIVATION'),
+        feedback:   metric('FEEDBACK'),
+        workload:   metric('WORKLOAD'),
+        overall:    metric('RATING'),
+    }
+    // Return null if we have no eval data at all
+    const hasData = Object.values(r).some(m => m.score !== null)
+    return hasData ? r : null
+}
+
 function buildDistribution(row: Record<string, string>, prefix: string) {
     return {
         '12':  toInt(row[`${prefix}_GRADE_12`]         ?? row['GRADE_12']         ?? '0'),
@@ -69,12 +163,19 @@ async function importFile(filePath: string) {
         const name = row['NAME']?.trim()
         if (!courseNumber || !name) continue
 
+        const info = buildInfo(row)
+        const evals = buildEvals(row)
+
         // Upsert course
         await pool.query(
-            `INSERT INTO courses (course_number, name, updated_at)
-             VALUES ($1, $2, NOW())
-             ON CONFLICT (course_number) DO UPDATE SET name = EXCLUDED.name, updated_at = NOW()`,
-            [courseNumber, name]
+            `INSERT INTO courses (course_number, name, info, evals, updated_at)
+             VALUES ($1, $2, $3, $4, NOW())
+             ON CONFLICT (course_number) DO UPDATE SET
+                name       = EXCLUDED.name,
+                info       = EXCLUDED.info,
+                evals      = EXCLUDED.evals,
+                updated_at = NOW()`,
+            [courseNumber, name, info, evals]
         )
         courseCount++
 
