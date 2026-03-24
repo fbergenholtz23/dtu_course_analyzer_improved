@@ -10,7 +10,7 @@ services:
     restart: unless-stopped
 
   backend:
-    image: yourusername/dtu-backend
+    image: dtu-backend
     environment:
       DATABASE_URL: postgresql://dtu:${DB_PASSWORD}@postgres:5432/dtu_grades
       PORT: 3000
@@ -19,7 +19,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: yourusername/dtu-frontend
+    image: dtu-frontend
     ports:
       - "8080:80"
     depends_on:
