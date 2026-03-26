@@ -21,18 +21,35 @@ export default function App() {
 
   return (
     <>
-      <button
-        onClick={() => setLight(l => !l)}
-        title={light ? 'Switch to dark mode' : 'Switch to light mode'}
-        style={{
-          position: 'fixed', top: 16, right: 20, zIndex: 999,
-          background: 'none', border: '1px solid var(--border)',
-          color: 'var(--text-muted)', borderRadius: 8,
-          padding: 0, cursor: 'pointer', lineHeight: 1,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          width: 37, height: 37,
-        }}
-      >
+      <div style={{ position: 'fixed', top: 16, right: 20, zIndex: 999, display: 'flex', gap: 8, alignItems: 'center' }}>
+        {view === 'search' && (
+          <button
+            onClick={() => setView('planner')}
+            title="Schedule Planner"
+            style={{
+              background: 'none', border: '1px solid var(--border)',
+              color: 'var(--text-muted)', borderRadius: 8,
+              padding: '0 12px', cursor: 'pointer', lineHeight: 1,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              height: 37, fontSize: 14, whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--text-muted)'; e.currentTarget.style.color = 'var(--text)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}
+          >
+            Schedule Planner
+          </button>
+        )}
+        <button
+          onClick={() => setLight(l => !l)}
+          title={light ? 'Switch to dark mode' : 'Switch to light mode'}
+          style={{
+            background: 'none', border: '1px solid var(--border)',
+            color: 'var(--text-muted)', borderRadius: 8,
+            padding: 0, cursor: 'pointer', lineHeight: 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 37, height: 37,
+          }}
+        >
         {light ? (
           // Dark mode: show moon (dark, no fill)
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -52,7 +69,8 @@ export default function App() {
             <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
           </svg>
         )}
-      </button>
+        </button>
+      </div>
 
       <AnimatePresence mode="wait">
         {view === 'course' && course ? (
@@ -65,7 +83,7 @@ export default function App() {
           </motion.div>
         ) : (
           <motion.div key="search" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-            <SearchPage onSelect={openCourse} onOpenPlanner={() => setView('planner')} />
+            <SearchPage onSelect={openCourse} />
           </motion.div>
         )}
       </AnimatePresence>

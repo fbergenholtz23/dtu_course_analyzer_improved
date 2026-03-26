@@ -6,9 +6,16 @@ function AccordionFilter({ label, options, selected, onChange }: {
   label: string; options: string[]; selected: string[]; onChange: (v: string[]) => void
 }) {
   const [open, setOpen] = useState(false)
+  const [overflow, setOverflow] = useState<'hidden' | 'visible'>('hidden')
+
+  function handleToggle() {
+    if (open) { setOverflow('hidden'); setOpen(false) }
+    else setOpen(true)
+  }
+
   return (
     <div style={{ borderTop: '1px solid var(--border-subtle)' }}>
-      <button onClick={() => setOpen(o => !o)} style={{
+      <button onClick={handleToggle} style={{
         width: '100%', background: 'none', border: 'none', cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '9px 0', color: 'var(--text-sec)',
@@ -29,9 +36,10 @@ function AccordionFilter({ label, options, selected, onChange }: {
           <motion.div
             initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.15 }}
-            style={{ overflow: 'hidden' }}
+            onAnimationComplete={() => { if (open) setOverflow('visible') }}
+            style={{ overflow }}
           >
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingBottom: 10 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingBottom: 10, maxHeight: 200, overflowY: 'auto' }}>
               {options.map(opt => {
                 const active = selected.includes(opt)
                 return (
@@ -188,6 +196,7 @@ export default function SchedulePlanner({ onBack }: Props) {
         const occupied = courses.flatMap(c => c.selectedSlots ?? [])
         params.set('occupied', JSON.stringify(occupied))
       }
+      params.set('scheduledOnly', 'true')
       const res = await fetch(`/api/courses?${params}`)
       setResults(await res.json())
     } finally {

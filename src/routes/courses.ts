@@ -46,16 +46,17 @@ router.get('/filters', async (_req: Request, res: Response) => {
 // GET /api/courses?q=&language=&department=&period=&occupied=<json>
 // Each filter param can be repeated for multi-select (e.g. language=Danish&language=English)
 router.get('/courses', async (req: Request, res: Response) => {
-    const q           = (req.query.q as string ?? '').trim()
-    const languages   = asArray(req.query.language)
-    const departments = asArray(req.query.department)
-    const periods     = asArray(req.query.period)
-    const occupiedRaw = (req.query.occupied as string ?? '').trim()
+    const q             = (req.query.q as string ?? '').trim()
+    const languages     = asArray(req.query.language)
+    const departments   = asArray(req.query.department)
+    const periods       = asArray(req.query.period)
+    const occupiedRaw   = (req.query.occupied as string ?? '').trim()
+    const scheduledOnly = req.query.scheduledOnly === 'true'
 
     const hasQuery   = q !== ''
     const hasFilters = languages.length > 0 || departments.length > 0 || periods.length > 0 || occupiedRaw !== ''
 
-    if (!hasQuery && !hasFilters) {
+    if (!hasQuery && !hasFilters && !scheduledOnly) {
         res.json([])
         return
     }
@@ -63,6 +64,9 @@ router.get('/courses', async (req: Request, res: Response) => {
     const conditions: string[] = []
     const params: unknown[] = []
 
+    if (scheduledOnly) {
+        conditions.push(`info IS NOT NULL`)
+    }
     if (hasQuery) {
         params.push(`%${q}%`)
         conditions.push(`(course_number ILIKE $${params.length} OR name ILIKE $${params.length})`)

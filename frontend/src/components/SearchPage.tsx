@@ -10,7 +10,6 @@ interface FilterOptions {
 
 interface Props {
   onSelect: (course: CourseDetail) => void
-  onOpenPlanner: () => void
 }
 
 function AccordionFilter({ label, options, selected, onChange }: {
@@ -20,10 +19,17 @@ function AccordionFilter({ label, options, selected, onChange }: {
   onChange: (val: string[]) => void
 }) {
   const [open, setOpen] = useState(false)
+  const [overflow, setOverflow] = useState<'hidden' | 'visible'>('hidden')
+
+  function handleToggle() {
+    if (open) { setOverflow('hidden'); setOpen(false) }
+    else setOpen(true)
+  }
+
   return (
     <div style={{ borderTop: '1px solid var(--border-subtle)' }}>
       <button
-        onClick={() => setOpen(o => !o)}
+        onClick={handleToggle}
         style={{
           width: '100%', background: 'none', border: 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -46,9 +52,10 @@ function AccordionFilter({ label, options, selected, onChange }: {
           <motion.div
             initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.15 }}
-            style={{ overflow: 'hidden' }}
+            onAnimationComplete={() => { if (open) setOverflow('visible') }}
+            style={{ overflow }}
           >
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingBottom: 15 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingBottom: 15, maxHeight: 220, overflowY: 'auto' }}>
               {options.map(opt => {
                 const active = selected.includes(opt)
                 return (
@@ -70,7 +77,7 @@ function AccordionFilter({ label, options, selected, onChange }: {
   )
 }
 
-export default function SearchPage({ onSelect, onOpenPlanner }: Props) {
+export default function SearchPage({ onSelect }: Props) {
   const [query, setQuery] = useState('')
   const [languages, setLanguages] = useState<string[]>([])
   const [departments, setDepartments] = useState<string[]>([])
@@ -83,6 +90,7 @@ export default function SearchPage({ onSelect, onOpenPlanner }: Props) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const activeFilters = languages.length + departments.length + periods.length
+  const [filterPanelOverflow, setFilterPanelOverflow] = useState<'hidden' | 'visible'>('hidden')
 
   useEffect(() => {
     fetch('/api/filters').then(r => r.json()).then(setFilterOptions).catch(() => {})
@@ -137,7 +145,7 @@ export default function SearchPage({ onSelect, onOpenPlanner }: Props) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    <div style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -153,21 +161,11 @@ export default function SearchPage({ onSelect, onOpenPlanner }: Props) {
           <div style={{ color: 'var(--text-muted)', marginTop: 10, fontSize: 19 }}>
             Search 2,691 courses · 6 years of grade data
           </div>
-          <button onClick={onOpenPlanner} style={{
-            marginTop: 20, background: 'none', border: '1px solid var(--border)',
-            color: 'var(--text-muted)', borderRadius: 10, padding: '10px 25px',
-            fontSize: 16, cursor: 'pointer',
-          }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--text-muted)'; e.currentTarget.style.color = 'var(--text)' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}
-          >
-            Schedule Planner →
-          </button>
         </div>
 
         {/* Search box + filter button */}
         <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
-          <div style={{ position: 'relative', flex: 1 }}>
+          <div style={{ position: 'relative', flex: 1  }}>
             <input
               autoFocus
               value={query}
@@ -187,7 +185,7 @@ export default function SearchPage({ onSelect, onOpenPlanner }: Props) {
           </div>
 
           {/* Filter button */}
-          <button onClick={() => setFiltersOpen(o => !o)} title="Filters" style={filterBtnStyle}>
+          <button onClick={() => { if (filtersOpen) setFilterPanelOverflow('hidden'); setFiltersOpen(o => !o) }} title="Filters" style={filterBtnStyle}>
             <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="4" y1="6" x2="20" y2="6" />
               <line x1="8" y1="12" x2="16" y2="12" />
@@ -212,7 +210,8 @@ export default function SearchPage({ onSelect, onOpenPlanner }: Props) {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2 }}
-              style={{ overflow: 'hidden' }}
+              onAnimationComplete={() => { if (filtersOpen) setFilterPanelOverflow('visible') }}
+              style={{ overflow: filterPanelOverflow }}
             >
               <div style={{
                 marginTop: 10, padding: '0 20px 15px',
